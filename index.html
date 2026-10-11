@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta name="theme-color" content="#123b68">
+  <meta name="description"
+        content="Informasi izin masuk dan keluar siswa SMAN 2 Rangkasbitung">
+
+  <title>Izin Siswa | SMAN 2 Rangkasbitung</title>
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon-192.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">IS</div>
+      <div>
+        <h1>Izin Siswa</h1>
+        <p>SMAN 2 Rangkasbitung</p>
+      </div>
+    </div>
+
+    <button id="loginButton" class="button button-primary">
+      Login
+    </button>
+  </header>
+
+  <main class="container">
+    <section class="welcome">
+      <p class="eyebrow">INFORMASI SEKOLAH</p>
+      <h2>Data Izin Masuk dan Keluar Siswa</h2>
+      <p>
+        Pantau siswa yang telah mendapatkan persetujuan
+        wali kelas dan wakasek.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h3>Daftar Siswa Izin</h3>
+          <p id="dateDescription">Izin yang disetujui pada tanggal pilihan.</p>
+        </div>
+
+        <div class="date-control">
+          <label for="filterTanggal">Pilih tanggal</label>
+          <input type="date" id="filterTanggal">
+        </div>
+      </div>
+
+      <div id="statusMessage" class="status-message" role="status">
+        Menyiapkan aplikasi...
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Nama Siswa</th>
+              <th>NISN</th>
+              <th>Kelas</th>
+              <th>Alasan</th>
+              <th>Keluar</th>
+              <th>Kembali</th>
+            </tr>
+          </thead>
+          <tbody id="izinTableBody">
+            <tr>
+              <td colspan="7" class="empty">
+                Data akan ditampilkan setelah Firebase
+                dihubungkan pada tahap berikutnya.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="privacy-note">
+        Halaman ini hanya menampilkan izin yang telah
+        disetujui sesuai kebijakan akses sekolah.
+      </p>
+    </section>
+
+    <section id="loginPanel" class="panel login-panel" hidden>
+      <h3>Login Pengguna</h3>
+      <p>Masuk menggunakan akun yang diberikan administrator.</p>
+
+      <form id="loginForm">
+        <label for="email">Email</label>
+        <input id="email" type="email"
+               autocomplete="username" required>
+
+        <label for="password">Kata sandi</label>
+        <input id="password" type="password"
+               autocomplete="current-password" required>
+
+        <button class="button button-primary" type="submit">
+          Masuk
+        </button>
+
+        <button class="button button-secondary"
+                id="cancelLogin" type="button">
+          Batal
+        </button>
+
+        <p id="loginMessage" role="status"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>SMAN 2 Rangkasbitung CERIA</p>
+    <p>Cerdas, Empati, Religius, Inovatif, Aman dan nyaman</p>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
