@@ -274,3 +274,39 @@ footer p {
     width: 100%;
   }
 }
+
+
+.role-badge {
+  display: inline-block;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-content {
+  padding-top: 8px;
+  line-height: 1.7;
+}
+
+.dashboard-content h4 {
+  margin-bottom: 8px;
+}
+
+.dashboard-content p {
+  color: #475569;
+}
+
+#loginMessage {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .role-badge {
+    margin-top: 8px;
+  }
+}
+
