@@ -2,6 +2,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 
 import {
+  orderBy
+} from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+import {
   getAuth,
   signInWithEmailAndPassword,
   onAuthStateChanged,
@@ -213,6 +217,199 @@ async function periksaProfil(user) {
     await signOut(auth);
   }
 }
+
+
+// =====================================================
+// TAHAP 7 - DASHBOARD WAKASEK
+// =====================================================
+
+const wakasekMessage = document.getElementById("wakasekMessage");
+const tabelIzinWakasek = document.getElementById("tabelIzinWakasek");
+const refreshIzinWakasek = document.getElementById("refreshIzinWakasek");
+
+function pesanWakasek(pesan) {
+  if (wakasekMessage) {
+    wakasekMessage.textContent = pesan;
+  }
+}
+
+function amanWakasek(nilai) {
+  return String(nilai ?? "").replace(/[&<>"']/g, karakter => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[karakter]);
+}
+
+async function muatIzinWakasek() {
+  if (!profilAktif || profilAktif.role !== "wakasek") {
+    pesanWakasek("Akses hanya untuk pengguna Wakasek.");
+    return;
+  }
+
+  tabelIzinWakasek.innerHTML =
+    '<tr><td colspan="10">Memuat data pengajuan...</td></tr>';
+
+  pesanWakasek("");
+
+  try {
+    const izinRef = collection(db, "izin");
+
+    // Ambil pengajuan yang belum diputuskan Wakasek.
+    const q = query(
+      izinRef,
+      where("statusWakasek", "==", "menunggu")
+    );
+
+    const hasil = await getDocs(q);
+
+    const daftar = [];
+
+    hasil.forEach(dokumen => {
+      daftar.push({
+        id: dokumen.id,
+        ...dokumen.data()
+      });
+    });
+
+    daftar.sort((a, b) => {
+      return String(b.tanggal || "").localeCompare(
+        String(a.tanggal || "")
+      );
+    });
+
+    if (daftar.length === 0) {
+      tabelIzinWakasek.innerHTML =
+        '<tr><td colspan="10">Tidak ada pengajuan yang menunggu persetujuan.</td></tr>';
+      return;
+    }
+
+    tabelIzinWakasek.innerHTML = daftar.map((izin, indeks) => `
+      <tr>
+        <td>${indeks + 1}</td>
+        <td>${amanWakasek(izin.tanggal)}</td>
+        <td>${amanWakasek(izin.namaSiswa)}</td>
+        <td>${amanWakasek(izin.nisn)}</td>
+        <td>${amanWakasek(izin.kelas)}</td>
+        <td>${amanWakasek(izin.alasan)}</td>
+        <td>${amanWakasek(izin.waktuKeluar)}</td>
+        <td>${amanWakasek(izin.waktuKembali)}</td>
+        <td>${amanWakasek(izin.waliNama)}</td>
+        <td>
+          <button
+            type="button"
+            data-aksi-izin="setujui"
+            data-id="${amanWakasek(izin.id)}">
+            Setujui
+          </button>
+
+          <button
+            type="button"
+            class="secondary-button"
+            data-aksi-izin="tolak"
+            data-id="${amanWakasek(izin.id)}">
+            Tolak
+          </button>
+        </td>
+      </tr>
+    `).join("");
+
+  } catch (error) {
+    console.error("Gagal memuat pengajuan Wakasek:", error);
+
+    tabelIzinWakasek.innerHTML =
+      '<tr><td colspan="10">Data gagal dimuat.</td></tr>';
+
+    pesanWakasek(
+      "Gagal memuat data. Periksa koneksi, login, dan Firestore Rules."
+    );
+  }
+}
+
+async function prosesKeputusanIzin(idIzin, keputusan) {
+  if (!profilAktif || profilAktif.role !== "wakasek") {
+    pesanWakasek("Akses ditolak. Silakan login sebagai Wakasek.");
+    return;
+  }
+
+  const konfirmasi = keputusan === "disetujui"
+    ? "Apakah pengajuan izin ini akan disetujui?"
+    : "Apakah pengajuan izin ini akan ditolak?";
+
+  if (!window.confirm(konfirmasi)) {
+    return;
+  }
+
+  pesanWakasek("Menyimpan keputusan...");
+
+  try {
+    const izinRef = doc(db, "izin", idIzin);
+    const izinSnap = await getDoc(izinRef);
+
+    if (!izinSnap.exists()) {
+      pesanWakasek("Pengajuan tidak ditemukan.");
+      await muatIzinWakasek();
+      return;
+    }
+
+    const dataIzin = izinSnap.data();
+
+    if (dataIzin.statusWakasek !== "menunggu") {
+      pesanWakasek("Pengajuan ini sudah diproses oleh pengguna lain.");
+      await muatIzinWakasek();
+      return;
+    }
+
+    await updateDoc(izinRef, {
+      statusWakasek: keputusan,
+      wakasekId: auth.currentUser.uid,
+      updatedAt: serverTimestamp()
+    });
+
+    pesanWakasek(
+      keputusan === "disetujui"
+        ? "Pengajuan berhasil disetujui."
+        : "Pengajuan berhasil ditolak."
+    );
+
+    await muatIzinWakasek();
+
+  } catch (error) {
+    console.error("Gagal menyimpan keputusan:", error);
+
+    pesanWakasek(
+      "Keputusan gagal disimpan. Periksa Firestore Rules dan koneksi."
+    );
+  }
+}
+
+// Tombol keputusan pada tabel.
+if (tabelIzinWakasek) {
+  tabelIzinWakasek.addEventListener("click", async event => {
+    const tombol = event.target.closest("button[data-aksi-izin]");
+
+    if (!tombol) return;
+
+    const idIzin = tombol.dataset.id;
+    const aksi = tombol.dataset.aksiIzin;
+
+    if (!idIzin) return;
+
+    const keputusan = aksi === "setujui"
+      ? "disetujui"
+      : "ditolak";
+
+    await prosesKeputusanIzin(idIzin, keputusan);
+  });
+}
+
+// Tombol muat ulang.
+if (refreshIzinWakasek) {
+  refreshIzinWakasek.addEventListener("click", muatIzinWakasek);
+}
+
 
 // =====================================================
 // ADMIN: DATA SISWA
