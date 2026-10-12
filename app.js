@@ -181,10 +181,16 @@ function tampilkanDashboard(profile) {
     roleBadge.textContent = "WAKASEK";
     document.getElementById("wakasekDashboard").hidden = false;
   muatIzinWakasek();
+    
   }else if (profile.role === "admin" ||
     profile.role === "wakasek") {
-  document.getElementById("monitoringIzinDashboard").hidden = false;
-  document.getElementById("riwayatKeputusanDashboard").hidden = false;
+  if (monitoringDashboard) {
+    monitoringDashboard.hidden = false;
+  }
+
+  if (riwayatDashboard) {
+    riwayatDashboard.hidden = false;
+  }
 
   muatMonitoringIzin();
   muatRiwayatKeputusan();
