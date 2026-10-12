@@ -55,6 +55,7 @@ const statusMessage = $("statusMessage");
 const filterTanggal = $("filterTanggal");
 const dateDescription = $("dateDescription");
 
+
 // Fitur admin Tahap 5
 const studentIdInput = $("studentId");
 const studentNamaInput = $("studentNama");
@@ -1003,16 +1004,10 @@ tampilkanTanggal();
 sembunyikanDashboard();
 
 //=========
-// Penambahan LIstener pada tahap 7
+// Penambahan LIstener pada tahap 6
 
 
-izinForm.addEventListener("submit", kirimPengajuanIzin);
 
-resetIzinButton.addEventListener("click", () => {
-  izinForm.reset();
-  izinTanggal.value = tanggalHariIni();
-  pesanIzin("");
-});
 
 //=========
 
