@@ -138,7 +138,7 @@ function sembunyikanDashboard() {
   adminDashboard.hidden = true;
   waliDashboard.hidden = true;
   wakasekDashboard.hidden = true;
-  kelasWaliInfo.textContent = "";
+  //kelasWaliInfo.textContent = "";
   profilAktif = null;
   daftarSiswa = [];
   studentTableBody.replaceChildren();
