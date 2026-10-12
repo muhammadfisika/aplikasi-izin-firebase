@@ -262,6 +262,93 @@
 </div>
 
 
+
+<!-- DASHBOARD PEMANTAUAN IZIN -->
+<div id="monitoringIzinDashboard" hidden>
+  <h3>Pemantauan Izin Siswa</h3>
+  <p>Daftar pengajuan izin yang sudah diputuskan Wakasek.</p>
+
+  <div class="student-form">
+    <label for="filterTanggalIzin">Filter tanggal izin</label>
+    <input type="date" id="filterTanggalIzin">
+
+    <label for="filterKelasIzin">Filter kelas</label>
+    <select id="filterKelasIzin">
+      <option value="">Semua kelas</option>
+      <option value="X">X</option>
+      <option value="XI">XI</option>
+      <option value="XII">XII</option>
+    </select>
+
+    <div class="student-actions">
+      <button type="button" id="btnFilterIzin">
+        Terapkan Filter
+      </button>
+      <button type="button" id="btnResetFilterIzin"
+              class="secondary-button">
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <p id="monitoringIzinMessage" role="status" aria-live="polite"></p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Tanggal</th>
+          <th>Nama Siswa</th>
+          <th>NISN</th>
+          <th>Kelas</th>
+          <th>Alasan</th>
+          <th>Keluar</th>
+          <th>Kembali</th>
+          <th>Wali Pengaju</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tabelMonitoringIzin">
+        <tr>
+          <td colspan="10">Data akan ditampilkan di sini.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- RIWAYAT KEPUTUSAN WAKASEK -->
+<div id="riwayatKeputusanDashboard" hidden>
+  <h3>Riwayat Keputusan Wakasek</h3>
+  <p>Daftar pengajuan yang disetujui atau ditolak oleh Wakasek.</p>
+
+  <p id="riwayatKeputusanMessage"
+     role="status" aria-live="polite"></p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Tanggal Izin</th>
+          <th>Nama Siswa</th>
+          <th>Kelas</th>
+          <th>Alasan</th>
+          <th>Wali Pengaju</th>
+          <th>Status Keputusan</th>
+          <th>Waktu Keluar</th>
+          <th>Waktu Kembali</th>
+        </tr>
+      </thead>
+      <tbody id="tabelRiwayatKeputusan">
+        <tr>
+          <td colspan="9">Riwayat akan ditampilkan di sini.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
         
 
        
