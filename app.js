@@ -72,8 +72,19 @@ const studentCount = $("studentCount");
 const studentTableBody = $("studentTableBody");
 
 //elemen tambahan tahap6 ------
-
+const izinForm = $("izinForm");
+const izinSiswa = $("izinSiswa");
+const izinTanggal = $("izinTanggal");
+const izinAlasan = $("izinAlasan");
+const izinWaktuKeluar = $("izinWaktuKeluar");
+const izinWaktuKembali = $("izinWaktuKembali");
+const submitIzinButton = $("submitIzinButton");
+const resetIzinButton = $("resetIzinButton");
+const izinMessage = $("izinMessage");
+const riwayatIzinWali = $("riwayatIzinWali");
 //---------------
+
+
 let auth;
 let db;
 let profilAktif = null;
