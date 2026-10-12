@@ -23,6 +23,7 @@ import {
   deleteDoc,
   query,
   where,
+  onSnapshot,
   serverTimestamp,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
@@ -172,7 +173,9 @@ function tampilkanDashboard(profile) {
     dashboardDescription.textContent = "Pengelolaan data sekolah";
     roleBadge.textContent = "ADMIN";
     muatDaftarSiswa();
-  } else if (profile.role === "wali") {
+  } 
+  
+  else if (profile.role === "wali") {
   dashboardTitle.textContent = "Dashboard Wali Kelas";
   dashboardDescription.textContent = "Pengajuan izin siswa";
   roleBadge.textContent = "WALI KELAS";
@@ -181,25 +184,24 @@ function tampilkanDashboard(profile) {
 
   muatPilihanSiswaWali();
 }
+  
   else if (profile.role === "wakasek") {
     dashboardTitle.textContent = "Dashboard Wakasek";
     dashboardDescription.textContent = "Pemeriksaan dan persetujuan izin";
     roleBadge.textContent = "WAKASEK";
-    document.getElementById("wakasekDashboard").hidden = false;
-  muatIzinWakasek();
+
+    wakasekDashboard.hidden = false;
+    muatIzinWakasek();
+    if (monitoringDashboard){
+      monitoringDashboard.hidden = false;
+    }
+    if (riwayatDashboard){
+      riwayatDashboard.hidden = false;
+    }
     
-  }else if (profile.role === "") {
-  if (monitoringDashboard) {
-    monitoringDashboard.hidden = false;
+    
+    
   }
-
-  if (riwayatDashboard) {
-    riwayatDashboard.hidden = false;
-  }
-
-  muatMonitoringIzin();
-  muatRiwayatKeputusan();
-}
 
   loginButton.textContent = "Logout";
 }
@@ -1337,6 +1339,84 @@ async function muatRiwayatIzinWali() {
 }
 
 
+// =====================================================
+// PERBAIKAN: TABEL IZIN PUBLIK
+// =====================================================
+
+let berhentiPantauIzinPublik = null;
+
+function pantauTabelIzinPublik() {
+  const tabel = document.getElementById("izinTableBody");
+
+  if (!tabel) {
+    console.warn(
+      "izinTableBody tidak ditemukan. Periksa ID tabel pada index.html."
+    );
+    return;
+  }
+
+  // Hindari listener ganda.
+  if (berhentiPantauIzinPublik) {
+    berhentiPantauIzinPublik();
+    berhentiPantauIzinPublik = null;
+  }
+
+  tabel.innerHTML =
+    '<tr><td colspan="7">Memuat data izin...</td></tr>';
+
+  // Sesuai Firestore Rules: hanya izin yang disetujui wali
+  // dan sudah disetujui Wakasek yang ditampilkan.
+  const q = query(
+    collection(db, "izin"),
+    where("statusWali", "==", "disetujui"),
+    where("statusWakasek", "==", "disetujui")
+  );
+
+  berhentiPantauIzinPublik = onSnapshot(
+    q,
+    (snapshot) => {
+      const tanggalTerpilih = filterTanggal?.value || "";
+
+      const daftar = snapshot.docs
+        .map(dokumen => ({
+          id: dokumen.id,
+          ...dokumen.data()
+        }))
+        .filter(izin =>
+          !tanggalTerpilih || izin.tanggal === tanggalTerpilih
+        )
+        .sort((a, b) =>
+          String(b.tanggal || "").localeCompare(
+            String(a.tanggal || "")
+          )
+        );
+
+      if (daftar.length === 0) {
+        tabel.innerHTML =
+          '<tr><td colspan="7">Tidak ada izin yang disetujui pada tanggal tersebut.</td></tr>';
+        return;
+      }
+
+      tabel.innerHTML = daftar.map((izin, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${teksAmanTahap8(izin.tanggal)}</td>
+          <td>${teksAmanTahap8(izin.namaSiswa)}</td>
+          <td>${teksAmanTahap8(izin.kelas)}</td>
+          <td>${teksAmanTahap8(izin.alasan)}</td>
+          <td>${teksAmanTahap8(izin.waktuKeluar)} - ${teksAmanTahap8(izin.waktuKembali)}</td>
+          <td>Disetujui</td>
+        </tr>
+      `).join("");
+    },
+    (error) => {
+      console.error("Gagal memantau izinTableBody:", error);
+
+      tabel.innerHTML =
+        '<tr><td colspan="7">Gagal memuat data izin. Periksa Firestore Rules.</td></tr>';
+    }
+  );
+}
 
 
 // =====================================================
@@ -1449,9 +1529,11 @@ if (!konfigurasiValid()) {
   setStatus("Konfigurasi Firebase belum diisi. Edit firebaseConfig di app.js.");
 } else {
   try {
-    const app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
+   const app = initializeApp(firebaseConfig);
+auth = getAuth(app);
+db = getFirestore(app);
+
+pantauTabelIzinPublik();
 
     onAuthStateChanged(auth, async user => {
       if (user) {
