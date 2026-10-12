@@ -69,6 +69,17 @@ const studentMessage = $("studentMessage");
 const studentSearch = $("studentSearch");
 const studentCount = $("studentCount");
 const studentTableBody = $("studentTableBody");
+//elemen tambahan tahap6
+const izinForm = $("izinForm");
+const izinSiswa = $("izinSiswa");
+const izinTanggal = $("izinTanggal");
+const izinAlasan = $("izinAlasan");
+const izinWaktuKeluar = $("izinWaktuKeluar");
+const izinWaktuKembali = $("izinWaktuKembali");
+const submitIzinButton = $("submitIzinButton");
+const resetIzinButton = $("resetIzinButton");
+const izinMessage = $("izinMessage");
+const riwayatIzinWali = $("riwayatIzinWali");
 
 let auth;
 let db;
@@ -153,6 +164,7 @@ function tampilkanDashboard(profile) {
     roleBadge.textContent = "WALI KELAS";
     kelasWaliInfo.textContent =
       `Kelas tanggung jawab: ${profile.kelasWali || "Belum ditetapkan"}`;
+    muatPilihanSiswaWali();
   } else if (profile.role === "wakasek") {
     dashboardTitle.textContent = "Dashboard Wakasek";
     dashboardDescription.textContent = "Pemeriksaan dan persetujuan izin";
@@ -627,6 +639,281 @@ function unduhTemplateCSV() {
 }
 
 // =====================================================
+// Tahap 6 : fungsi untuk memilih siswa dan mengirim pengajuan
+// =====================================================
+
+function pesanIzin(pesan) {
+  izinMessage.textContent = pesan;
+}
+
+function tanggalHariIni() {
+  const sekarang = new Date();
+  const tahun = sekarang.getFullYear();
+  const bulan = String(sekarang.getMonth() + 1).padStart(2, "0");
+  const hari = String(sekarang.getDate()).padStart(2, "0");
+  return `${tahun}-${bulan}-${hari}`;
+}
+
+async function muatPilihanSiswaWali() {
+  if (!auth?.currentUser || profilAktif?.role !== "wali") return;
+
+  const kelasWali = String(profilAktif.kelasWali || "").trim();
+
+  izinSiswa.replaceChildren();
+
+  const opsiAwal = document.createElement("option");
+  opsiAwal.value = "";
+  opsiAwal.textContent = "Pilih siswa";
+  izinSiswa.appendChild(opsiAwal);
+
+  if (!kelasWali) {
+    pesanIzin("Kelas wali belum diatur. Hubungi administrator.");
+    return;
+  }
+
+  izinTanggal.min = tanggalHariIni();
+  if (!izinTanggal.value) izinTanggal.value = tanggalHariIni();
+
+  izinSiswa.disabled = true;
+  submitIzinButton.disabled = true;
+  pesanIzin("Memuat siswa kelas " + kelasWali + "...");
+
+  try {
+    // Query dibatasi pada kelas wali dan siswa aktif.
+    const q = query(
+      collection(db, "siswa"),
+      where("kelas", "==", kelasWali),
+      where("aktif", "==", true)
+    );
+
+    const snapshot = await getDocs(q);
+
+    const siswaKelas = snapshot.docs.map(dok => ({
+      id: dok.id,
+      ...dok.data()
+    }));
+
+    siswaKelas.sort((a, b) =>
+      String(a.nama || "").localeCompare(String(b.nama || ""), "id")
+    );
+
+    for (const siswa of siswaKelas) {
+      const opsi = document.createElement("option");
+      opsi.value = siswa.id;
+      opsi.textContent =
+        `${siswa.nama || "(Tanpa nama)"} — ${siswa.nisn || "-"}`;
+      izinSiswa.appendChild(opsi);
+    }
+
+    if (siswaKelas.length === 0) {
+      pesanIzin(
+        `Belum ada siswa aktif di kelas ${kelasWali}. Periksa data siswa.`
+      );
+    } else {
+      pesanIzin(
+        `Ditemukan ${siswaKelas.length} siswa aktif di kelas ${kelasWali}.`
+      );
+    }
+  } catch (error) {
+    console.error("Gagal memuat siswa untuk wali:", error);
+
+    pesanIzin(
+      error.code === "permission-denied"
+        ? "Akses daftar siswa ditolak. Periksa Firestore Rules pada koleksi siswa."
+        : "Gagal memuat siswa. Periksa koneksi Firebase."
+    );
+  } finally {
+    izinSiswa.disabled = false;
+    submitIzinButton.disabled = false;
+  }
+
+  await muatRiwayatIzinWali();
+}
+
+async function kirimPengajuanIzin(event) {
+  event.preventDefault();
+
+  if (profilAktif?.role !== "wali" || !auth?.currentUser) {
+    pesanIzin("Silakan login dengan akun wali kelas.");
+    return;
+  }
+
+  if (sedangMemprosesSiswa) return;
+
+  const siswaId = izinSiswa.value;
+  const tanggal = izinTanggal.value;
+  const alasan = izinAlasan.value.trim();
+  const waktuKeluar = izinWaktuKeluar.value;
+  const waktuKembali = izinWaktuKembali.value;
+  const kelasWali = String(profilAktif.kelasWali || "").trim();
+
+  if (
+    !siswaId ||
+    !tanggal ||
+    !alasan ||
+    !waktuKeluar ||
+    !waktuKembali
+  ) {
+    pesanIzin("Lengkapi semua kolom pengajuan izin.");
+    return;
+  }
+
+  if (tanggal < tanggalHariIni()) {
+    pesanIzin("Tanggal izin tidak boleh lebih awal dari hari ini.");
+    return;
+  }
+
+  if (waktuKembali <= waktuKeluar) {
+    pesanIzin(
+      "Waktu kembali harus lebih akhir daripada waktu keluar. " +
+      "Jika izin melewati tengah malam, ajukan dengan mekanisme terpisah."
+    );
+    return;
+  }
+
+  sedangMemprosesSiswa = true;
+  submitIzinButton.disabled = true;
+  submitIzinButton.textContent = "Menyimpan...";
+
+  try {
+    // Ambil ulang dokumen siswa agar data pengajuan berasal dari Firestore.
+    const siswaRef = doc(db, "siswa", siswaId);
+    const siswaSnap = await getDoc(siswaRef);
+
+    if (!siswaSnap.exists()) {
+      pesanIzin("Data siswa tidak ditemukan. Muat ulang daftar siswa.");
+      return;
+    }
+
+    const siswa = siswaSnap.data();
+
+    // Validasi tambahan di aplikasi; Firestore Rules tetap wajib memvalidasi.
+    if (
+      siswa.aktif !== true ||
+      String(siswa.kelas || "").trim() !== kelasWali
+    ) {
+      pesanIzin("Siswa tidak aktif atau bukan dari kelas tanggung jawab Anda.");
+      await muatPilihanSiswaWali();
+      return;
+    }
+
+    const uid = auth.currentUser.uid;
+
+    await addDoc(collection(db, "izin"), {
+      siswaId,
+      namaSiswa: String(siswa.nama || ""),
+      nisn: String(siswa.nisn || ""),
+      kelas: String(siswa.kelas || ""),
+      tanggal,
+      alasan,
+      waktuKeluar,
+      waktuKembali,
+
+      waliId: uid,
+      waliNama: String(profilAktif.nama || ""),
+      statusWali: "disetujui",
+
+      wakasekId: "",
+      statusWakasek: "menunggu",
+
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    izinForm.reset();
+    izinTanggal.value = tanggalHariIni();
+
+    pesanIzin("Pengajuan izin berhasil dikirim dan menunggu persetujuan wakasek.");
+
+    await muatRiwayatIzinWali();
+  } catch (error) {
+    console.error("Gagal mengirim pengajuan izin:", error);
+
+    pesanIzin(
+      error.code === "permission-denied"
+        ? "Pengajuan ditolak oleh Firestore Rules. Periksa aturan create koleksi izin."
+        : "Pengajuan gagal disimpan. Periksa koneksi dan konfigurasi Firebase."
+    );
+  } finally {
+    sedangMemprosesSiswa = false;
+    submitIzinButton.disabled = false;
+    submitIzinButton.textContent = "Ajukan Izin";
+  }
+}
+
+async function muatRiwayatIzinWali() {
+  if (!auth?.currentUser || profilAktif?.role !== "wali") return;
+
+  riwayatIzinWali.replaceChildren();
+
+  try {
+    const q = query(
+      collection(db, "izin"),
+      where("waliId", "==", auth.currentUser.uid)
+    );
+
+    const snapshot = await getDocs(q);
+
+    const riwayat = snapshot.docs.map(dok => ({
+      id: dok.id,
+      ...dok.data()
+    }));
+
+    riwayat.sort((a, b) =>
+      String(b.tanggal || "").localeCompare(String(a.tanggal || ""))
+    );
+
+    if (riwayat.length === 0) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 6;
+      td.textContent = "Belum ada pengajuan izin.";
+      tr.appendChild(td);
+      riwayatIzinWali.appendChild(tr);
+      return;
+    }
+
+    for (const item of riwayat) {
+      const tr = document.createElement("tr");
+
+      const status = item.statusWakasek === "disetujui"
+        ? "Disetujui"
+        : item.statusWakasek === "ditolak"
+          ? "Ditolak"
+          : "Menunggu";
+
+      const kolom = [
+        item.tanggal || "-",
+        item.namaSiswa || "-",
+        item.kelas || "-",
+        item.alasan || "-",
+        `${item.waktuKeluar || "-"}–${item.waktuKembali || "-"}`,
+        status
+      ];
+
+      for (const isi of kolom) {
+        const td = document.createElement("td");
+        td.textContent = isi;
+        tr.appendChild(td);
+      }
+
+      riwayatIzinWali.appendChild(tr);
+    }
+  } catch (error) {
+    console.error("Gagal memuat riwayat izin:", error);
+
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 6;
+    td.textContent =
+      "Riwayat gagal dimuat. Periksa Firestore Rules koleksi izin.";
+    tr.appendChild(td);
+    riwayatIzinWali.appendChild(tr);
+  }
+}
+
+
+// =====================================================
 // EVENT LISTENERS
 // =====================================================
 
@@ -714,6 +1001,20 @@ filterTanggal.value = formatTanggalLokal(new Date());
 filterTanggal.addEventListener("change", tampilkanTanggal);
 tampilkanTanggal();
 sembunyikanDashboard();
+
+//=========
+// Penambahan LIstener pada tahap 7
+
+
+izinForm.addEventListener("submit", kirimPengajuanIzin);
+
+resetIzinButton.addEventListener("click", () => {
+  izinForm.reset();
+  izinTanggal.value = tanggalHariIni();
+  pesanIzin("");
+});
+
+//=========
 
 if (!konfigurasiValid()) {
   loginButton.disabled = true;
