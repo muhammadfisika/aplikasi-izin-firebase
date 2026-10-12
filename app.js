@@ -179,6 +179,8 @@ function tampilkanDashboard(profile) {
     dashboardTitle.textContent = "Dashboard Wakasek";
     dashboardDescription.textContent = "Pemeriksaan dan persetujuan izin";
     roleBadge.textContent = "WAKASEK";
+    document.getElementById("wakasekDashboard").hidden = false;
+  muatIzinWakasek();
   }
 
   loginButton.textContent = "Logout";
