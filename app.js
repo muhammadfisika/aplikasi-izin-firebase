@@ -188,8 +188,7 @@ function tampilkanDashboard(profile) {
     document.getElementById("wakasekDashboard").hidden = false;
   muatIzinWakasek();
     
-  }else if (profile.role === "admin" ||
-    profile.role === "wakasek") {
+  }else if (profile.role === "") {
   if (monitoringDashboard) {
     monitoringDashboard.hidden = false;
   }
