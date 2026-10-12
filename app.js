@@ -1012,8 +1012,7 @@ resetIzinButton.addEventListener("click", () => {
   izinForm.reset();
   izinTanggal.value = tanggalHariIni();
   pesanIzin("");
-
-}
+});
 
 
 
