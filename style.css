@@ -413,3 +413,36 @@ button:disabled {
 }
 
 
+#izinForm select,
+#izinForm input,
+#izinForm textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+#izinForm textarea {
+  resize: vertical;
+}
+
+#izinMessage {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+#riwayatIzinWali td {
+  padding: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+  text-align: left;
+}
+
+
+
