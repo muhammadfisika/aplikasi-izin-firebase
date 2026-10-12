@@ -196,7 +196,7 @@ function tampilkanDashboard(profile) {
       monitoringDashboard.hidden = false;
     }
     if (riwayatDashboard){
-      riwayatDashboard.hidden = false;
+      riwayatDashboard.hidden = true;
     }
     
     
