@@ -70,6 +70,7 @@ const studentMessage = $("studentMessage");
 const studentSearch = $("studentSearch");
 const studentCount = $("studentCount");
 const studentTableBody = $("studentTableBody");
+
 //elemen tambahan tahap6
 const izinForm = $("izinForm");
 const izinSiswa = $("izinSiswa");
