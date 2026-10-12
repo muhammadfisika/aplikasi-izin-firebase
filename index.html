@@ -126,10 +126,78 @@
       <div class="dashboard-content">
         <p id="dashboardWelcome"></p>
 
-        <div id="adminDashboard" hidden>
-          <h4>Menu Admin</h4>
-          <p>Pengelolaan data siswa akan tersedia pada Tahap 5.</p>
-        </div>
+       
+<div id="adminDashboard" hidden>
+  <h4>Data Siswa</h4>
+  <p>Tambah, ubah, hapus, cari, dan impor data siswa.</p>
+
+  <div class="student-form">
+    <input type="hidden" id="studentId">
+
+    <label for="studentNama">Nama lengkap siswa</label>
+    <input id="studentNama" type="text"
+           placeholder="Nama lengkap siswa" required>
+
+    <label for="studentNisn">NISN</label>
+    <input id="studentNisn" type="text" inputmode="numeric"
+           maxlength="20" placeholder="Nomor induk siswa" required>
+
+    <label for="studentKelas">Kelas</label>
+    <input id="studentKelas" type="text"
+           placeholder="Contoh: X-1" required>
+
+    <div class="student-actions">
+      <button type="button" id="saveStudentButton">Simpan Siswa</button>
+      <button type="button" id="resetStudentButton" class="secondary-button">
+        Bersihkan Form
+      </button>
+    </div>
+  </div>
+
+  <hr>
+
+  <h4>Impor Data Siswa dari CSV</h4>
+  <p>Gunakan kolom: <b>nama, nisn, kelas</b>. Baris pertama adalah judul kolom.</p>
+
+  <div class="student-actions">
+    <input id="studentCsvFile" type="file" accept=".csv,text/csv">
+    <button type="button" id="importStudentButton">Impor CSV</button>
+    <button type="button" id="downloadCsvTemplateButton" class="secondary-button">
+      Unduh Template CSV
+    </button>
+  </div>
+
+  <p id="studentMessage" role="status" aria-live="polite"></p>
+
+  <hr>
+
+  <h4>Daftar Siswa</h4>
+  <input id="studentSearch" type="search"
+         placeholder="Cari nama, NISN, atau kelas...">
+
+  <p id="studentCount">Memuat data siswa...</p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Nama</th>
+          <th>NISN</th>
+          <th>Kelas</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="studentTableBody">
+        <tr>
+          <td colspan="6">Data siswa akan ditampilkan di sini.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 
         <div id="waliDashboard" hidden>
           <h4>Menu Wali Kelas</h4>
