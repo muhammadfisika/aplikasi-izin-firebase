@@ -310,3 +310,106 @@ footer p {
   }
 }
 
+
+.student-form {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.student-form label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.student-form input,
+#studentSearch,
+#studentCsvFile {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+  color: #0f172a;
+}
+
+.student-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.student-actions button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.secondary-button {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+#studentMessage {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+#studentTableBody td,
+#studentTableBody th {
+  padding: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.student-edit-button,
+.student-delete-button {
+  margin: 2px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.student-edit-button {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.student-delete-button {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .student-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .student-actions button {
+    width: 100%;
+  }
+}
+
+
