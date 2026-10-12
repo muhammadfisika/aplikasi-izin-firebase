@@ -1005,7 +1005,12 @@ sembunyikanDashboard();
 
 //=========
 // Penambahan LIstener pada tahap 6
+izinForm.addEventListener("submit", kirimPengajuanIzin);
 
+resetIzinButton.addEventListener("click", () => {
+  izinForm.reset();
+  izinTanggal.value = tanggalHariIni();
+  pesanIzin("");
 
 
 
