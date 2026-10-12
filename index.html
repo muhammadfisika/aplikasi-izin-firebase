@@ -264,13 +264,47 @@
 
         
 
-        <div id="wakasekDashboard" hidden>
-          <h4>Menu Wakasek</h4>
-          <p>
-            Pemeriksaan dan persetujuan izin akan tersedia
-            pada Tahap 7.
-          </p>
-        </div>
+       
+<!-- DASHBOARD WAKASEK -->
+<div id="wakasekDashboard" hidden>
+  <h3>Verifikasi Pengajuan Izin Siswa</h3>
+  <p>Periksa pengajuan izin dari wali kelas, kemudian pilih Setujui atau Tolak.</p>
+
+  <div class="student-actions">
+    <button id="refreshIzinWakasek" type="button">
+      Muat Ulang Data
+    </button>
+  </div>
+
+  <p id="wakasekMessage" role="status" aria-live="polite"></p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Tanggal</th>
+          <th>Nama Siswa</th>
+          <th>NISN</th>
+          <th>Kelas</th>
+          <th>Alasan</th>
+          <th>Waktu Keluar</th>
+          <th>Waktu Kembali</th>
+          <th>Wali Pengaju</th>
+          <th>Keputusan</th>
+        </tr>
+      </thead>
+      <tbody id="tabelIzinWakasek">
+        <tr>
+          <td colspan="10">Data pengajuan akan ditampilkan di sini.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+      
+      
       </div>
     </section>
 
