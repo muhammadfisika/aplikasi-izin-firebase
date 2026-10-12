@@ -1,26 +1,29 @@
 
-import { initializeApp } from
-  "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 
 import {
   getAuth,
   signInWithEmailAndPassword,
   onAuthStateChanged,
   signOut
-} from
-  "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 
 import {
   getFirestore,
   doc,
-  getDoc
-} from
-  "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+  getDoc,
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  serverTimestamp,
+  writeBatch
+} from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-// ==========================================
-// 1. KONFIGURASI FIREBASE
-// ==========================================
-// Ganti dengan konfigurasi ASLI dari Firebase Console.
+// PERTAHANKAN firebaseConfig ASLI DARI PROYEK ANDA.
 const firebaseConfig = {
   apiKey: "AIzaSyBn-ERAS69N5yr2N-UKya5xmMPQVGSfQYA",
   authDomain: "izin-siswa-sman2.firebaseapp.com",
@@ -30,9 +33,6 @@ const firebaseConfig = {
   appId: "1:228224655749:web:d804a93eac455ffe49e4ec"
 };
 
-// ==========================================
-// 2. INISIALISASI
-// ==========================================
 const $ = id => document.getElementById(id);
 
 const loginButton = $("loginButton");
@@ -46,7 +46,6 @@ const dashboardTitle = $("dashboardTitle");
 const dashboardDescription = $("dashboardDescription");
 const dashboardWelcome = $("dashboardWelcome");
 const roleBadge = $("roleBadge");
-
 const adminDashboard = $("adminDashboard");
 const waliDashboard = $("waliDashboard");
 const wakasekDashboard = $("wakasekDashboard");
@@ -56,19 +55,40 @@ const statusMessage = $("statusMessage");
 const filterTanggal = $("filterTanggal");
 const dateDescription = $("dateDescription");
 
+// Fitur admin Tahap 5
+const studentIdInput = $("studentId");
+const studentNamaInput = $("studentNama");
+const studentNisnInput = $("studentNisn");
+const studentKelasInput = $("studentKelas");
+const saveStudentButton = $("saveStudentButton");
+const resetStudentButton = $("resetStudentButton");
+const studentCsvFile = $("studentCsvFile");
+const importStudentButton = $("importStudentButton");
+const downloadCsvTemplateButton = $("downloadCsvTemplateButton");
+const studentMessage = $("studentMessage");
+const studentSearch = $("studentSearch");
+const studentCount = $("studentCount");
+const studentTableBody = $("studentTableBody");
+
 let auth;
 let db;
-let sedangMemproses = false;
+let profilAktif = null;
+let daftarSiswa = [];
+let sedangMemprosesLogin = false;
+let sedangMemprosesSiswa = false;
 
 function setStatus(pesan) {
   statusMessage.textContent = pesan;
+}
+
+function setPesanSiswa(pesan) {
+  studentMessage.textContent = pesan;
 }
 
 function formatTanggalLokal(date) {
   const tahun = date.getFullYear();
   const bulan = String(date.getMonth() + 1).padStart(2, "0");
   const hari = String(date.getDate()).padStart(2, "0");
-
   return `${tahun}-${bulan}-${hari}`;
 }
 
@@ -79,10 +99,11 @@ function tampilkanTanggal() {
 }
 
 function konfigurasiValid() {
-  return Object.values(firebaseConfig).every(nilai =>
-    typeof nilai === "string" &&
-    nilai.length > 0 &&
-    !nilai.startsWith("GANTI_DENGAN_")
+  return Object.values(firebaseConfig).every(
+    nilai =>
+      typeof nilai === "string" &&
+      nilai.length > 0 &&
+      !nilai.startsWith("GANTI_DENGAN_")
   );
 }
 
@@ -103,37 +124,38 @@ function sembunyikanDashboard() {
   waliDashboard.hidden = true;
   wakasekDashboard.hidden = true;
   kelasWaliInfo.textContent = "";
+  profilAktif = null;
+  daftarSiswa = [];
+  studentTableBody.replaceChildren();
+  studentCount.textContent = "";
+  setPesanSiswa("");
 }
 
 function tampilkanDashboard(profile) {
-  const role = profile.role;
+  profilAktif = profile;
 
-  sembunyikanLogin();
-
-  adminDashboard.hidden = role !== "admin";
-  waliDashboard.hidden = role !== "wali";
-  wakasekDashboard.hidden = role !== "wakasek";
-
+  adminDashboard.hidden = profile.role !== "admin";
+  waliDashboard.hidden = profile.role !== "wali";
+  wakasekDashboard.hidden = profile.role !== "wakasek";
   dashboardPanel.hidden = false;
+
   dashboardWelcome.textContent =
     `Selamat datang, ${profile.nama || "Pengguna"}.`;
 
-  if (role === "admin") {
+  if (profile.role === "admin") {
     dashboardTitle.textContent = "Dashboard Admin";
-    dashboardDescription.textContent =
-      "Pengelolaan data sekolah";
+    dashboardDescription.textContent = "Pengelolaan data sekolah";
     roleBadge.textContent = "ADMIN";
-  } else if (role === "wali") {
+    muatDaftarSiswa();
+  } else if (profile.role === "wali") {
     dashboardTitle.textContent = "Dashboard Wali Kelas";
-    dashboardDescription.textContent =
-      "Pengajuan izin siswa";
+    dashboardDescription.textContent = "Pengajuan izin siswa";
     roleBadge.textContent = "WALI KELAS";
     kelasWaliInfo.textContent =
       `Kelas tanggung jawab: ${profile.kelasWali || "Belum ditetapkan"}`;
-  } else if (role === "wakasek") {
+  } else if (profile.role === "wakasek") {
     dashboardTitle.textContent = "Dashboard Wakasek";
-    dashboardDescription.textContent =
-      "Pemeriksaan dan persetujuan izin";
+    dashboardDescription.textContent = "Pemeriksaan dan persetujuan izin";
     roleBadge.textContent = "WAKASEK";
   }
 
@@ -147,44 +169,467 @@ async function periksaProfil(user) {
 
     if (!profilSnap.exists()) {
       setStatus(
-        "Akun berhasil login, tetapi profil pengguna belum dibuat. " +
-        "Hubungi administrator."
+        "Profil pengguna belum dibuat. Minta admin membuat dokumen users dengan ID UID akun ini."
       );
       await signOut(auth);
       return;
     }
 
     const profile = profilSnap.data();
-    const roleValid = ["admin", "wali", "wakasek"].includes(
-      profile.role
-    );
+    const roleValid = ["admin", "wali", "wakasek"].includes(profile.role);
 
     if (profile.aktif !== true || !roleValid) {
-      setStatus(
-        "Akun tidak aktif atau peran belum ditetapkan. " +
-        "Hubungi administrator."
-      );
+      setStatus("Akun tidak aktif atau peran belum ditetapkan.");
       await signOut(auth);
       return;
     }
 
     tampilkanDashboard(profile);
     setStatus("Login berhasil.");
+    sembunyikanLogin();
   } catch (error) {
     console.error("Gagal membaca profil:", error);
-
     setStatus(
-      "Profil tidak dapat dibaca. Periksa Firestore Rules, " +
-      "UID dokumen users, dan koneksi internet."
+      "Profil tidak dapat dibaca. Periksa Firestore Rules dan dokumen users."
     );
-
     await signOut(auth);
   }
 }
 
-// ==========================================
-// 3. LOGIN DAN LOGOUT
-// ==========================================
+// =====================================================
+// ADMIN: DATA SISWA
+// =====================================================
+
+async function muatDaftarSiswa() {
+  if (!auth?.currentUser || profilAktif?.role !== "admin") return;
+
+  studentCount.textContent = "Memuat data siswa...";
+  setPesanSiswa("");
+
+  try {
+    const snapshot = await getDocs(collection(db, "siswa"));
+
+    daftarSiswa = snapshot.docs.map(dok => ({
+      id: dok.id,
+      ...dok.data()
+    }));
+
+    daftarSiswa.sort((a, b) =>
+      String(a.nama || "").localeCompare(String(b.nama || ""), "id")
+    );
+
+    tampilkanDaftarSiswa();
+  } catch (error) {
+    console.error("Gagal memuat siswa:", error);
+    studentCount.textContent = "Data siswa gagal dimuat.";
+    setPesanSiswa(
+      "Tidak dapat membaca koleksi siswa. Periksa Firestore Rules dan koneksi."
+    );
+  }
+}
+
+function tampilkanDaftarSiswa() {
+  if (profilAktif?.role !== "admin") return;
+
+  const kata = studentSearch.value.trim().toLocaleLowerCase("id");
+
+  const hasil = daftarSiswa.filter(siswa => {
+    const teks = [
+      siswa.nama || "",
+      siswa.nisn || "",
+      siswa.kelas || ""
+    ].join(" ").toLocaleLowerCase("id");
+
+    return teks.includes(kata);
+  });
+
+  studentCount.textContent =
+    `Menampilkan ${hasil.length} dari ${daftarSiswa.length} siswa.`;
+
+  studentTableBody.replaceChildren();
+
+  if (hasil.length === 0) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 6;
+    td.textContent = "Tidak ada data siswa yang cocok.";
+    tr.appendChild(td);
+    studentTableBody.appendChild(tr);
+    return;
+  }
+
+  hasil.forEach((siswa, index) => {
+    const tr = document.createElement("tr");
+
+    const nilai = [
+      String(index + 1),
+      siswa.nama || "",
+      String(siswa.nisn || ""),
+      siswa.kelas || "",
+      siswa.aktif === false ? "Tidak aktif" : "Aktif"
+    ];
+
+    nilai.forEach(teks => {
+      const td = document.createElement("td");
+      td.textContent = teks;
+      tr.appendChild(td);
+    });
+
+    const aksiTd = document.createElement("td");
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "student-edit-button";
+    editButton.textContent = "Edit";
+    editButton.addEventListener("click", () => isiFormSiswa(siswa));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "student-delete-button";
+    deleteButton.textContent = "Hapus";
+    deleteButton.addEventListener("click", () => hapusSiswa(siswa));
+
+    aksiTd.append(editButton, deleteButton);
+    tr.appendChild(aksiTd);
+    studentTableBody.appendChild(tr);
+  });
+}
+
+function isiFormSiswa(siswa) {
+  studentIdInput.value = siswa.id;
+  studentNamaInput.value = siswa.nama || "";
+  studentNisnInput.value = String(siswa.nisn || "");
+  studentKelasInput.value = siswa.kelas || "";
+
+  saveStudentButton.textContent = "Simpan Perubahan";
+  setPesanSiswa(`Mengubah data: ${siswa.nama || siswa.nisn}`);
+  studentNamaInput.focus();
+}
+
+function bersihkanFormSiswa() {
+  studentIdInput.value = "";
+  studentNamaInput.value = "";
+  studentNisnInput.value = "";
+  studentKelasInput.value = "";
+  saveStudentButton.textContent = "Simpan Siswa";
+}
+
+async function nisnSudahAda(nisn, kecualiId = "") {
+  const q = query(
+    collection(db, "siswa"),
+    where("nisn", "==", nisn)
+  );
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.some(dok => dok.id !== kecualiId);
+}
+
+async function simpanSiswa() {
+  if (profilAktif?.role !== "admin" || !auth?.currentUser) {
+    setPesanSiswa("Hanya admin yang boleh mengelola data siswa.");
+    return;
+  }
+
+  if (sedangMemprosesSiswa) return;
+
+  const id = studentIdInput.value.trim();
+  const nama = studentNamaInput.value.trim();
+  const nisn = studentNisnInput.value.trim();
+  const kelas = studentKelasInput.value.trim();
+
+  if (!nama || !nisn || !kelas) {
+    setPesanSiswa("Nama, NISN, dan kelas wajib diisi.");
+    return;
+  }
+
+  if (!/^\d{5,20}$/.test(nisn)) {
+    setPesanSiswa("NISN harus berupa 5–20 digit angka. Periksa kembali.");
+    return;
+  }
+
+  sedangMemprosesSiswa = true;
+  saveStudentButton.disabled = true;
+
+  try {
+    if (await nisnSudahAda(nisn, id)) {
+      setPesanSiswa("NISN tersebut sudah digunakan oleh siswa lain.");
+      return;
+    }
+
+    const dataSiswa = {
+      nama,
+      nisn,
+      kelas,
+      aktif: true,
+      diperbaruiPada: serverTimestamp()
+    };
+
+    if (id) {
+      await updateDoc(doc(db, "siswa", id), dataSiswa);
+      setPesanSiswa("Perubahan data siswa berhasil disimpan.");
+    } else {
+      await addDoc(collection(db, "siswa"), {
+        ...dataSiswa,
+        dibuatPada: serverTimestamp()
+      });
+      setPesanSiswa("Siswa berhasil ditambahkan.");
+    }
+
+    bersihkanFormSiswa();
+    await muatDaftarSiswa();
+  } catch (error) {
+    console.error("Gagal menyimpan siswa:", error);
+    setPesanSiswa(
+      error.code === "permission-denied"
+        ? "Akses ditolak oleh Firestore Rules. Pastikan akun ini memiliki role admin."
+        : "Gagal menyimpan siswa. Periksa koneksi dan konfigurasi Firebase."
+    );
+  } finally {
+    sedangMemprosesSiswa = false;
+    saveStudentButton.disabled = false;
+  }
+}
+
+async function hapusSiswa(siswa) {
+  if (profilAktif?.role !== "admin" || !auth?.currentUser) {
+    setPesanSiswa("Hanya admin yang boleh menghapus data siswa.");
+    return;
+  }
+
+  const yakin = window.confirm(
+    `Hapus data siswa ${siswa.nama || siswa.nisn}?\n\n` +
+    "Pastikan data ini tidak sedang digunakan pada data izin."
+  );
+
+  if (!yakin) return;
+
+  try {
+    await deleteDoc(doc(db, "siswa", siswa.id));
+    setPesanSiswa("Data siswa berhasil dihapus.");
+    await muatDaftarSiswa();
+  } catch (error) {
+    console.error("Gagal menghapus siswa:", error);
+    setPesanSiswa(
+      "Gagal menghapus data. Periksa Firestore Rules dan koneksi."
+    );
+  }
+}
+
+// =====================================================
+// ADMIN: IMPOR CSV
+// Format header: nama,nisn,kelas
+// =====================================================
+
+function parseCSV(teks) {
+  const baris = [];
+  let kolom = [];
+  let nilai = "";
+  let dalamKutip = false;
+
+  teks = teks.replace(/^\uFEFF/, "");
+
+  for (let i = 0; i < teks.length; i++) {
+    const karakter = teks[i];
+    const berikutnya = teks[i + 1];
+
+    if (karakter === '"') {
+      if (dalamKutip && berikutnya === '"') {
+        nilai += '"';
+        i++;
+      } else {
+        dalamKutip = !dalamKutip;
+      }
+    } else if (karakter === "," && !dalamKutip) {
+      kolom.push(nilai.trim());
+      nilai = "";
+    } else if (
+      (karakter === "\n" || karakter === "\r") &&
+      !dalamKutip
+    ) {
+      if (karakter === "\r" && berikutnya === "\n") i++;
+
+      kolom.push(nilai.trim());
+
+      if (kolom.some(item => item !== "")) {
+        baris.push(kolom);
+      }
+
+      kolom = [];
+      nilai = "";
+    } else {
+      nilai += karakter;
+    }
+  }
+
+  if (nilai.length > 0 || kolom.length > 0) {
+    kolom.push(nilai.trim());
+    if (kolom.some(item => item !== "")) baris.push(kolom);
+  }
+
+  return baris;
+}
+
+function normalisasiHeader(teks) {
+  return String(teks || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
+}
+
+async function imporCSV() {
+  if (profilAktif?.role !== "admin" || !auth?.currentUser) {
+    setPesanSiswa("Hanya admin yang boleh mengimpor data siswa.");
+    return;
+  }
+
+  const file = studentCsvFile.files[0];
+
+  if (!file) {
+    setPesanSiswa("Pilih file CSV terlebih dahulu.");
+    return;
+  }
+
+  if (sedangMemprosesSiswa) return;
+
+  sedangMemprosesSiswa = true;
+  importStudentButton.disabled = true;
+
+  try {
+    const teks = await file.text();
+    const baris = parseCSV(teks);
+
+    if (baris.length < 2) {
+      setPesanSiswa("CSV kosong atau hanya berisi judul kolom.");
+      return;
+    }
+
+    // Terima nama header seperti nama, Nama, NISN, atau nisn.
+    // Pemisah yang didukung: koma.
+    const header = baris[0].map(normalisasiHeader);
+    const idxNama = header.indexOf("nama");
+    const idxNisn = header.indexOf("nisn");
+    const idxKelas = header.indexOf("kelas");
+
+    if (idxNama < 0 || idxNisn < 0 || idxKelas < 0) {
+      setPesanSiswa(
+        "Header wajib: nama, nisn, kelas. Gunakan pemisah koma."
+      );
+      return;
+    }
+
+    const dataCSV = [];
+    const nisnDiFile = new Set();
+    let barisTidakValid = 0;
+    let nisnDuplikatDiFile = 0;
+
+    for (let i = 1; i < baris.length; i++) {
+      const row = baris[i];
+      const nama = String(row[idxNama] || "").trim();
+      const nisn = String(row[idxNisn] || "").trim();
+      const kelas = String(row[idxKelas] || "").trim();
+
+      if (!nama || !kelas || !/^\d{5,20}$/.test(nisn)) {
+        barisTidakValid++;
+        continue;
+      }
+
+      if (nisnDiFile.has(nisn)) {
+        nisnDuplikatDiFile++;
+        continue;
+      }
+
+      nisnDiFile.add(nisn);
+      dataCSV.push({ nama, nisn, kelas });
+    }
+
+    if (dataCSV.length === 0) {
+      setPesanSiswa(
+        "Tidak ada baris valid. Periksa nama, NISN, dan kelas pada CSV."
+      );
+      return;
+    }
+
+    // Ambil NISN yang sudah tersimpan agar impor tidak menambah duplikat.
+    const snapshotLama = await getDocs(collection(db, "siswa"));
+    const nisnLama = new Set(
+      snapshotLama.docs.map(dok => String(dok.data().nisn || "").trim())
+    );
+
+    const dataBaru = dataCSV.filter(siswa => !nisnLama.has(siswa.nisn));
+    const duplikatFirestore = dataCSV.length - dataBaru.length;
+
+    if (dataBaru.length === 0) {
+      setPesanSiswa(
+        `Tidak ada data baru. Semua ${dataCSV.length} NISN valid sudah ada di database.`
+      );
+      return;
+    }
+
+    // Batasi batch di bawah batas maksimum operasi Firestore.
+    let totalTersimpan = 0;
+
+    for (let awal = 0; awal < dataBaru.length; awal += 400) {
+      const bagian = dataBaru.slice(awal, awal + 400);
+      const batch = writeBatch(db);
+
+      for (const siswa of bagian) {
+        const refBaru = doc(collection(db, "siswa"));
+        batch.set(refBaru, {
+          ...siswa,
+          aktif: true,
+          dibuatPada: serverTimestamp(),
+          diperbaruiPada: serverTimestamp()
+        });
+      }
+
+      await batch.commit();
+      totalTersimpan += bagian.length;
+    }
+
+    studentCsvFile.value = "";
+
+    setPesanSiswa(
+      `Impor selesai. Berhasil ditambahkan: ${totalTersimpan}. ` +
+      `Duplikat di database: ${duplikatFirestore}. ` +
+      `Duplikat di file: ${nisnDuplikatDiFile}. ` +
+      `Baris tidak valid: ${barisTidakValid}.`
+    );
+
+    await muatDaftarSiswa();
+  } catch (error) {
+    console.error("Impor CSV gagal:", error);
+
+    setPesanSiswa(
+      error.code === "permission-denied"
+        ? "Impor ditolak oleh Firestore Rules. Pastikan login menggunakan akun admin dan Rules mengizinkan admin menulis koleksi siswa."
+        : "Impor gagal. Periksa format CSV, koneksi, dan Firebase Console."
+    );
+  } finally {
+    sedangMemprosesSiswa = false;
+    importStudentButton.disabled = false;
+  }
+}
+
+function unduhTemplateCSV() {
+  const isi = "nama,nisn,kelas\nAndi Saputra,0091234567,X-1\n";
+  const blob = new Blob(["\uFEFF", isi], {
+    type: "text/csv;charset=utf-8;"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "template-data-siswa.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+// =====================================================
+// EVENT LISTENERS
+// =====================================================
+
 loginButton.addEventListener("click", async () => {
   if (!auth) {
     setStatus("Firebase belum dikonfigurasi.");
@@ -205,72 +650,66 @@ loginButton.addEventListener("click", async () => {
   }
 
   loginPanel.hidden = !loginPanel.hidden;
-
-  if (!loginPanel.hidden) {
-    $("email").focus();
-  }
+  if (!loginPanel.hidden) $("email").focus();
 });
 
-cancelLogin.addEventListener("click", () => {
-  sembunyikanLogin();
-});
+cancelLogin.addEventListener("click", sembunyikanLogin);
 
 loginForm.addEventListener("submit", async event => {
   event.preventDefault();
 
-  if (sedangMemproses) return;
+  if (sedangMemprosesLogin) return;
 
   if (!auth) {
-    loginMessage.textContent =
-      "Firebase belum dikonfigurasi dengan benar.";
+    loginMessage.textContent = "Firebase belum dikonfigurasi.";
     return;
   }
 
   const email = $("email").value.trim();
   const password = $("password").value;
 
-  sedangMemproses = true;
-  const tombolSubmit = loginForm.querySelector(
-    'button[type="submit"]'
-  );
-
-  tombolSubmit.disabled = true;
-  tombolSubmit.textContent = "Memeriksa akun...";
+  sedangMemprosesLogin = true;
+  const tombol = loginForm.querySelector('button[type="submit"]');
+  tombol.disabled = true;
+  tombol.textContent = "Memeriksa akun...";
   loginMessage.textContent = "";
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    // onAuthStateChanged akan memeriksa profil dan peran.
   } catch (error) {
     console.error("Login gagal:", error);
 
-    if (
-      error.code === "auth/invalid-credential" ||
-      error.code === "auth/wrong-password" ||
-      error.code === "auth/user-not-found"
-    ) {
-      loginMessage.textContent =
-        "Email atau kata sandi tidak benar.";
+    if ([
+      "auth/invalid-credential",
+      "auth/wrong-password",
+      "auth/user-not-found"
+    ].includes(error.code)) {
+      loginMessage.textContent = "Email atau kata sandi tidak benar.";
     } else if (error.code === "auth/invalid-email") {
-      loginMessage.textContent =
-        "Format email tidak valid.";
+      loginMessage.textContent = "Format email tidak valid.";
     } else if (error.code === "auth/too-many-requests") {
-      loginMessage.textContent =
-        "Terlalu banyak percobaan. Coba lagi nanti.";
+      loginMessage.textContent = "Terlalu banyak percobaan. Coba lagi nanti.";
     } else {
       loginMessage.textContent =
         "Login gagal. Periksa konfigurasi Firebase dan domain.";
     }
   } finally {
-    sedangMemproses = false;
-    tombolSubmit.disabled = false;
-    tombolSubmit.textContent = "Masuk";
+    sedangMemprosesLogin = false;
+    tombol.disabled = false;
+    tombol.textContent = "Masuk";
   }
 });
 
-// ==========================================
-// 4. INISIALISASI APLIKASI
-// ==========================================
+saveStudentButton.addEventListener("click", simpanSiswa);
+resetStudentButton.addEventListener("click", () => {
+  bersihkanFormSiswa();
+  setPesanSiswa("");
+});
+
+studentSearch.addEventListener("input", tampilkanDaftarSiswa);
+importStudentButton.addEventListener("click", imporCSV);
+downloadCsvTemplateButton.addEventListener("click", unduhTemplateCSV);
+
 filterTanggal.value = formatTanggalLokal(new Date());
 filterTanggal.addEventListener("change", tampilkanTanggal);
 tampilkanTanggal();
@@ -278,9 +717,7 @@ sembunyikanDashboard();
 
 if (!konfigurasiValid()) {
   loginButton.disabled = true;
-  setStatus(
-    "Konfigurasi Firebase belum diisi. Edit firebaseConfig di app.js."
-  );
+  setStatus("Konfigurasi Firebase belum diisi. Edit firebaseConfig di app.js.");
 } else {
   try {
     const app = initializeApp(firebaseConfig);
@@ -293,23 +730,17 @@ if (!konfigurasiValid()) {
       } else {
         sembunyikanDashboard();
         loginButton.textContent = "Login";
+        setStatus("Aplikasi siap. Login untuk membuka dashboard pengguna.");
       }
     });
 
-    setStatus(
-      "Aplikasi siap. Login untuk membuka dashboard pengguna."
-    );
+    setStatus("Aplikasi siap. Login untuk membuka dashboard pengguna.");
   } catch (error) {
-    console.error("Inisialisasi gagal:", error);
-    setStatus(
-      "Aplikasi gagal terhubung ke Firebase. Periksa konfigurasi."
-    );
+    console.error("Inisialisasi Firebase gagal:", error);
+    setStatus("Aplikasi gagal terhubung ke Firebase. Periksa konfigurasi.");
   }
 }
 
-// ==========================================
-// 5. SERVICE WORKER
-// ==========================================
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
