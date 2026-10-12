@@ -199,14 +199,70 @@
 </div>
 
 
-        <div id="waliDashboard" hidden>
-          <h4>Menu Wali Kelas</h4>
-          <p>
-            Pengajuan izin siswa sesuai kelas wali akan tersedia
-            pada Tahap 6.
-          </p>
-          <p id="kelasWaliInfo"></p>
-        </div>
+       
+<div id="waliDashboard" hidden>
+  <h4>Pengajuan Izin Siswa</h4>
+  <p id="kelasWaliInfo"></p>
+
+  <form id="izinForm" class="student-form">
+    <label for="izinSiswa">Pilih siswa</label>
+    <select id="izinSiswa" required>
+      <option value="">Memuat daftar siswa...</option>
+    </select>
+
+    <label for="izinTanggal">Tanggal izin</label>
+    <input id="izinTanggal" type="date" required>
+
+    <label for="izinAlasan">Alasan izin</label>
+    <textarea id="izinAlasan" rows="3" maxlength="500"
+      placeholder="Tuliskan alasan izin siswa" required></textarea>
+
+    <label for="izinWaktuKeluar">Waktu keluar</label>
+    <input id="izinWaktuKeluar" type="time" required>
+
+    <label for="izinWaktuKembali">Perkiraan waktu kembali</label>
+    <input id="izinWaktuKembali" type="time" required>
+
+    <div class="student-actions">
+      <button id="submitIzinButton" type="submit">
+        Ajukan Izin
+      </button>
+      <button id="resetIzinButton" type="button" class="secondary-button">
+        Bersihkan Form
+      </button>
+    </div>
+  </form>
+
+  <p id="izinMessage" role="status" aria-live="polite"></p>
+
+  <hr>
+
+  <h4>Riwayat Pengajuan Saya</h4>
+  <p>Daftar pengajuan izin yang dibuat oleh akun wali kelas ini.</p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Tanggal</th>
+          <th>Nama Siswa</th>
+          <th>Kelas</th>
+          <th>Alasan</th>
+          <th>Waktu</th>
+          <th>Status Wakasek</th>
+        </tr>
+      </thead>
+      <tbody id="riwayatIzinWali">
+        <tr>
+          <td colspan="6">Riwayat akan ditampilkan di sini.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+        
 
         <div id="wakasekDashboard" hidden>
           <h4>Menu Wakasek</h4>
