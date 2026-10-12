@@ -171,7 +171,7 @@ function tampilkanDashboard(profile) {
 
   muatPilihanSiswaWali();
 }
-  } else if (profile.role === "wakasek") {
+  else if (profile.role === "wakasek") {
     dashboardTitle.textContent = "Dashboard Wakasek";
     dashboardDescription.textContent = "Pemeriksaan dan persetujuan izin";
     roleBadge.textContent = "WAKASEK";
