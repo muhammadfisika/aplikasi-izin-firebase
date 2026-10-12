@@ -181,7 +181,14 @@ function tampilkanDashboard(profile) {
     roleBadge.textContent = "WAKASEK";
     document.getElementById("wakasekDashboard").hidden = false;
   muatIzinWakasek();
-  }
+  }else if (profile.role === "admin" ||
+    profile.role === "wakasek") {
+  document.getElementById("monitoringIzinDashboard").hidden = false;
+  document.getElementById("riwayatKeputusanDashboard").hidden = false;
+
+  muatMonitoringIzin();
+  muatRiwayatKeputusan();
+}
 
   loginButton.textContent = "Logout";
 }
@@ -220,6 +227,207 @@ async function periksaProfil(user) {
   }
 }
 
+
+// =====================================================
+// TAHAP 8 - PEMANTAUAN IZIN DAN RIWAYAT KEPUTUSAN
+// =====================================================
+
+const filterTanggalIzin = document.getElementById("filterTanggalIzin");
+const filterKelasIzin = document.getElementById("filterKelasIzin");
+const btnFilterIzin = document.getElementById("btnFilterIzin");
+const btnResetFilterIzin = document.getElementById("btnResetFilterIzin");
+
+const monitoringIzinMessage =
+  document.getElementById("monitoringIzinMessage");
+
+const tabelMonitoringIzin =
+  document.getElementById("tabelMonitoringIzin");
+
+const riwayatKeputusanMessage =
+  document.getElementById("riwayatKeputusanMessage");
+
+const tabelRiwayatKeputusan =
+  document.getElementById("tabelRiwayatKeputusan");
+
+function teksAmanTahap8(nilai) {
+  return String(nilai ?? "").replace(/[&<>"']/g, karakter => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[karakter]);
+}
+
+function statusIzinTahap8(izin) {
+  if (izin.statusWakasek === "disetujui") {
+    return "Disetujui";
+  }
+
+  if (izin.statusWakasek === "ditolak") {
+    return "Ditolak";
+  }
+
+  return "Menunggu";
+}
+
+// Mengambil data izin sesuai filter.
+async function ambilDataIzinTahap8() {
+  const hasil = await getDocs(collection(db, "izin"));
+  const data = [];
+
+  hasil.forEach(dokumen => {
+    data.push({
+      id: dokumen.id,
+      ...dokumen.data()
+    });
+  });
+
+  const tanggal = filterTanggalIzin?.value || "";
+  const kelas = filterKelasIzin?.value || "";
+
+  return data
+    .filter(izin => {
+      // Hanya pengajuan yang sudah diputuskan Wakasek.
+      const sudahDiputuskan = [
+        "disetujui",
+        "ditolak"
+      ].includes(izin.statusWakasek);
+
+      const cocokTanggal =
+        !tanggal || izin.tanggal === tanggal;
+
+      const cocokKelas =
+        !kelas ||
+        String(izin.kelas || "").startsWith(kelas);
+
+      return sudahDiputuskan && cocokTanggal && cocokKelas;
+    })
+    .sort((a, b) =>
+      String(b.tanggal || "").localeCompare(String(a.tanggal || ""))
+    );
+}
+
+// Tabel pemantauan: hanya izin yang disetujui.
+async function muatMonitoringIzin() {
+  if (!profilAktif ||
+      !["admin", "wakasek"].includes(profilAktif.role)) {
+    if (monitoringIzinMessage) {
+      monitoringIzinMessage.textContent =
+        "Halaman ini hanya dapat diakses Admin atau Wakasek.";
+    }
+    return;
+  }
+
+  tabelMonitoringIzin.innerHTML =
+    '<tr><td colspan="10">Memuat data...</td></tr>';
+
+  monitoringIzinMessage.textContent = "";
+
+  try {
+    const data = await ambilDataIzinTahap8();
+    const disetujui = data.filter(
+      izin => izin.statusWakasek === "disetujui"
+    );
+
+    if (disetujui.length === 0) {
+      tabelMonitoringIzin.innerHTML =
+        '<tr><td colspan="10">Tidak ada izin yang sesuai dengan filter.</td></tr>';
+      return;
+    }
+
+    tabelMonitoringIzin.innerHTML = disetujui.map((izin, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${teksAmanTahap8(izin.tanggal)}</td>
+        <td>${teksAmanTahap8(izin.namaSiswa)}</td>
+        <td>${teksAmanTahap8(izin.nisn)}</td>
+        <td>${teksAmanTahap8(izin.kelas)}</td>
+        <td>${teksAmanTahap8(izin.alasan)}</td>
+        <td>${teksAmanTahap8(izin.waktuKeluar)}</td>
+        <td>${teksAmanTahap8(izin.waktuKembali)}</td>
+        <td>${teksAmanTahap8(izin.waliNama)}</td>
+        <td>${statusIzinTahap8(izin)}</td>
+      </tr>
+    `).join("");
+
+  } catch (error) {
+    console.error("Gagal memuat monitoring izin:", error);
+
+    tabelMonitoringIzin.innerHTML =
+      '<tr><td colspan="10">Data gagal dimuat.</td></tr>';
+
+    monitoringIzinMessage.textContent =
+      "Gagal membaca data. Periksa Firestore Rules dan koneksi.";
+  }
+}
+
+// Riwayat keputusan Wakasek: disetujui dan ditolak.
+async function muatRiwayatKeputusan() {
+  if (!profilAktif ||
+      !["admin", "wakasek"].includes(profilAktif.role)) {
+    riwayatKeputusanMessage.textContent =
+      "Halaman ini hanya dapat diakses Admin atau Wakasek.";
+    return;
+  }
+
+  tabelRiwayatKeputusan.innerHTML =
+    '<tr><td colspan="9">Memuat riwayat...</td></tr>';
+
+  riwayatKeputusanMessage.textContent = "";
+
+  try {
+    const data = await ambilDataIzinTahap8();
+
+    if (data.length === 0) {
+      tabelRiwayatKeputusan.innerHTML =
+        '<tr><td colspan="9">Belum ada riwayat keputusan.</td></tr>';
+      return;
+    }
+
+    tabelRiwayatKeputusan.innerHTML = data.map((izin, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${teksAmanTahap8(izin.tanggal)}</td>
+        <td>${teksAmanTahap8(izin.namaSiswa)}</td>
+        <td>${teksAmanTahap8(izin.kelas)}</td>
+        <td>${teksAmanTahap8(izin.alasan)}</td>
+        <td>${teksAmanTahap8(izin.waliNama)}</td>
+        <td>${statusIzinTahap8(izin)}</td>
+        <td>${teksAmanTahap8(izin.waktuKeluar)}</td>
+        <td>${teksAmanTahap8(izin.waktuKembali)}</td>
+      </tr>
+    `).join("");
+
+  } catch (error) {
+    console.error("Gagal memuat riwayat keputusan:", error);
+
+    tabelRiwayatKeputusan.innerHTML =
+      '<tr><td colspan="9">Riwayat gagal dimuat.</td></tr>';
+
+    riwayatKeputusanMessage.textContent =
+      "Gagal membaca riwayat. Periksa Firestore Rules dan koneksi.";
+  }
+}
+
+// Terapkan filter.
+if (btnFilterIzin) {
+  btnFilterIzin.addEventListener("click", async () => {
+    await muatMonitoringIzin();
+    await muatRiwayatKeputusan();
+  });
+}
+
+// Reset filter.
+if (btnResetFilterIzin) {
+  btnResetFilterIzin.addEventListener("click", async () => {
+    filterTanggalIzin.value = "";
+    filterKelasIzin.value = "";
+
+    await muatMonitoringIzin();
+    await muatRiwayatKeputusan();
+  });
+}
 
 // =====================================================
 // TAHAP 7 - DASHBOARD WAKASEK
