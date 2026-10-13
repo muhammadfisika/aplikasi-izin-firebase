@@ -1504,8 +1504,20 @@ importStudentButton.addEventListener("click", imporCSV);
 downloadCsvTemplateButton.addEventListener("click", unduhTemplateCSV);
 
 filterTanggal.value = formatTanggalLokal(new Date());
-filterTanggal.addEventListener("change", tampilkanTanggal);
+
+filterTanggal.addEventListener("change", () => {
+  tampilkanTanggal();
+
+  // Muat ulang pemantauan agar tabel memakai tanggal terbaru.
+  if (db) {
+    pantauTabelIzinPublik();
+  }
+});
+
 tampilkanTanggal();
+
+
+
 sembunyikanDashboard();
 
 //=========
