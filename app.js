@@ -877,7 +877,7 @@ function parseCSV(teks) {
       } else {
         dalamKutip = !dalamKutip;
       }
-    } else if (karakter === "," && !dalamKutip) {
+    } else if (karakter === ";" && !dalamKutip) {
       kolom.push(nilai.trim());
       nilai = "";
     } else if (
