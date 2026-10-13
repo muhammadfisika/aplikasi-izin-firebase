@@ -193,7 +193,7 @@ function tampilkanDashboard(profile) {
     wakasekDashboard.hidden = false;
     muatIzinWakasek();
     if (monitoringDashboard){
-      monitoringDashboard.hidden = false;
+      monitoringDashboard.hidden = true;
     }
     if (riwayatDashboard){
       riwayatDashboard.hidden = true;
