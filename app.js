@@ -89,8 +89,8 @@ const izinMessage = $("izinMessage");
 const riwayatIzinWali = $("riwayatIzinWali");
 //---------------
 //elemen tambahan tahap8 ------
-//const monitoringDashboard =
-  //document.getElementById("monitoringIzinDashboard");
+const monitoringDashboard =
+  document.getElementById("monitoringIzinDashboard");
 
 const riwayatDashboard =
   document.getElementById("riwayatKeputusanDashboard");
