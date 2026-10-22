@@ -39,7 +39,35 @@
         wali kelas dan wakasek.
       </p>
     </section>
+<section id="loginPanel" class="panel login-panel" hidden>
+      <h3>Login Pengguna</h3>
+      <p>Masuk menggunakan akun yang diberikan administrator.</p>
 
+      <form id="loginForm">
+        <label for="email">Email</label>
+        <input id="email" type="email"
+               autocomplete="username" required>
+
+        <label for="password">Kata sandi</label>
+        <input id="password" type="password"
+               autocomplete="current-password" required>
+
+        <button class="button button-primary" type="submit">
+          Masuk
+        </button>
+
+        <button class="button button-secondary"
+                id="cancelLogin" type="button">
+          Batal
+        </button>
+
+        <p id="loginMessage" role="status"></p>
+      </form>
+    </section>
+
+
+
+    
     <section class="panel">
       <div class="panel-heading">
         <div>
@@ -87,32 +115,7 @@
       </p>
     </section>
 
-    <section id="loginPanel" class="panel login-panel" hidden>
-      <h3>Login Pengguna</h3>
-      <p>Masuk menggunakan akun yang diberikan administrator.</p>
-
-      <form id="loginForm">
-        <label for="email">Email</label>
-        <input id="email" type="email"
-               autocomplete="username" required>
-
-        <label for="password">Kata sandi</label>
-        <input id="password" type="password"
-               autocomplete="current-password" required>
-
-        <button class="button button-primary" type="submit">
-          Masuk
-        </button>
-
-        <button class="button button-secondary"
-                id="cancelLogin" type="button">
-          Batal
-        </button>
-
-        <p id="loginMessage" role="status"></p>
-      </form>
-    </section>
-
+    
 
     <section id="dashboardPanel" class="panel" hidden>
       <div class="panel-heading">
